@@ -16,6 +16,7 @@ export function * fetchFiles () {
   try {
     const {files} = yield select()
     const res = yield call(api.files.list, files.root)
+    // console.log('fetchFiles', res)
     yield put(filesActions.filesList.success(res))
   } catch (err) {
     yield put(filesActions.filesList.failure(err.message))
@@ -67,11 +68,17 @@ export function * watchCreateFiles () {
   while (true) {
     try {
       const {root, files} = yield take(filesActions.FILES.CREATE_FILES)
+      console.log('create files', files)
       yield put(filesActions.createFiles.request())
       yield call(api.files.createFiles, root, files)
 
       yield fork(fetchFiles)
       yield put(filesActions.createFiles.success())
+      var res = yield call(api.files.stat, files[0].name)
+      // console.log('res is', res) 
+      console.log('hash is', res.hash)
+      // yield put(filesActions.addToContract(res.hash))
+      yield put(api.files.addToContract(res.hash))
     } catch (err) {
       yield put(filesActions.createFiles.failure(err.message))
     }

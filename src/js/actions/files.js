@@ -5,6 +5,7 @@ export const FILES_MKDIR = createRequestTypes('FILES_MKDIR')
 export const FILES_RMDIR = createRequestTypes('FILES_RMDIR')
 export const FILES_MVDIR = createRequestTypes('FILES_MVDIR')
 export const FILES_CREATE_FILES = createRequestTypes('FILES_CREATE_FILES')
+export const FILES_ADD_TO_CONTRACT = createRequestTypes('FILES_ADD_TO_CONTRACT')
 
 export const FILES = {
   CANCEL: 'FILES_CANCEL',
@@ -18,6 +19,8 @@ export const FILES = {
   DESELECT_FILE: 'DESELECT_FILE',
   DESELECT_ALL_FILE: 'DESELECT_ALL_FILE',
   CREATE_FILES: 'CREATE_FILES',
+  GET_STAT: 'GET_STAT',
+  ADD_TO_CONTRACT: 'ADD_TO_CONTRACT',
   MV_DIR: 'FILES_MV_DIR'
 }
 
@@ -68,3 +71,5 @@ export const filesDeselect = (file) => action(FILES.DESELECT_FILE, {file})
 export const filesDeselectAll = () => action(FILES.DESELECT_ALL_FILE)
 
 export const filesCreateFiles = (root, files) => action(FILES.CREATE_FILES, {root, files})
+export const filesGetStat = (name) => action(FILES.GET_STAT, {name})
+// export const addToContract = (hash) => action(FILES.ADD_TO_CONTRACT, {hash})
