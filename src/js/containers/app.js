@@ -44,10 +44,7 @@ class App extends Component {
                 <div className='col-sm-2 branding'>
                   <div className='row'>
                     <div className='navbar-header'>
-                      <Link className='navbar-brand col-xs-12' to='/'>
-                        <img src={require('../../img/logo.png')} alt='IPFS' className='img-responsive logo' />
-                        <span className='sr-only'>{i18n.t('IPFS')}</span>
-                      </Link>
+                      <span className='fslogo'>FileStorm</span>
                     </div>
                   </div>
                 </div>

@@ -16,7 +16,7 @@ export function * fetchFiles () {
   try {
     const {files} = yield select()
     const res = yield call(api.files.list, files.root)
-    // console.log('fetchFiles', res)
+    console.log('fetchFiles', res)
     yield put(filesActions.filesList.success(res))
   } catch (err) {
     yield put(filesActions.filesList.failure(err.message))
@@ -75,10 +75,15 @@ export function * watchCreateFiles () {
       yield fork(fetchFiles)
       yield put(filesActions.createFiles.success())
       var res = yield call(api.files.stat, files[0].name)
-      // console.log('res is', res) 
       console.log('hash is', res.hash)
-      // yield put(filesActions.addToContract(res.hash))
-      yield put(api.files.addToContract(res.hash))
+      // console.log("addToContract", resAddToContract)
+      // var callback = (err, res) => {
+      //   console.log("err", err)
+      //   console.log("res", res)
+      // }
+      var resAddToContract = yield call(api.files.addToContract, res.hash)
+      console.log('resAddToContract', resAddToContract)
+      // yield put(resAddToContract.success(callback))
     } catch (err) {
       yield put(filesActions.createFiles.failure(err.message))
     }

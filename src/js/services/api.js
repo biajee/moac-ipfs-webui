@@ -2,6 +2,7 @@ import API from 'ipfs-api'
 import {sortBy} from 'lodash-es'
 import {join} from 'path'
 import Chain3 from 'chain3'
+import abi from 'ethereumjs-abi'
 
 
 const host = (process.env.NODE_ENV !== 'production') ? 'localhost' : window.location.hostname
@@ -21,20 +22,117 @@ if(myChain3 && typeof myChain3 !== 'undefined') {
 
 // -- Public Interface
 
+export const scsApi = {
+  initFlag: false,
+  init () {
+    if (!scsApi.initFlag) {
+      scsApi.options = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      }
+      scsApi.url = 'http://127.0.0.1:1337/rpc'
+  //    scsApi.url = 'http://139.198.126.104:8546/rpc'
+      // scsApi.url = 'http://35.196.114.202:50068/rpc'
+      scsApi.contractAddress = '0xf6a97597540165b9accd3837adfb7d1e77397bc1'
+      scsApi.abi = [{"constant":false,"inputs":[],"name":"list","outputs":[{"name":"count","type":"uint256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"fileHash","type":"string"}],"name":"read","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"fileHash","type":"string"}],"name":"remove","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"","type":"uint256"}],"name":"fileHashes","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"s1","type":"string"},{"name":"s2","type":"string"}],"name":"compareStringsbyBytes","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"pure","type":"function"},{"constant":false,"inputs":[{"name":"fileHash","type":"string"}],"name":"write","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"}]
+      scsApi.sender = '0x18e926ad1821e38597368b606be81de580f46686'
+      scsApi.initFlag = true
+    }
+
+  },
+
+  request(bodyJSON) {
+    scsApi.init()
+    scsApi.options.body = JSON.stringify(bodyJSON)
+    return fetch (scsApi.url, scsApi.options)
+      .then((resp) => {
+        return resp.json()
+      })
+  },
+
+  getScsId() {
+    var bodyJSON = { "jsonrpc": "2.0", "id": 0, "method": "ScsRPCMethod.GetScsId", "params": {} }
+    return scsApi.request(bodyJSON)
+  },
+
+  getNonce(sender, subChainAddr) {
+    if (!subChainAddr) {
+      subChainAddr = scsApi.contractAddress
+    }
+    if (!sender) {
+      sender = scsApi.sender
+    }
+    var bodyJSON = { "jsonrpc": "2.0", "id": 0, "method": "ScsRPCMethod.GetNonce", "params": {"Sender": sender, "SubChainAddr": subChainAddr} }
+    return scsApi.request(bodyJSON)
+  },
+
+  getData(sender, subChainAddr, dataFunc) {
+    if (!subChainAddr) {
+      subChainAddr = scsApi.contractAddress
+    }
+    if (!sender) {
+      sender = scsApi.sender
+    }
+    var bodyJSON = { "jsonrpc": "2.0", "id": 0, "method": "ScsRPCMethod.GetData", "params": {"Sender": sender, "SubChainAddr": subChainAddr, "Func": dataFunc} }
+    console.log("getData call", bodyJSON)
+    return scsApi.request(bodyJSON)
+  },
+
+  getDappState(sender, subChainAddr) {
+    if (!subChainAddr) {
+      subChainAddr = scsApi.contractAddress
+    }
+    if (!sender) {
+      sender = scsApi.sender
+    }
+    var bodyJSON = { "jsonrpc": "2.0", "id": 0, "method": "ScsRPCMethod.GetDappState", "params": {"Sender": sender, "SubChainAddr": subChainAddr} }
+    return scsApi.request(bodyJSON)
+  },
+
+  getContractInfo(subChainAddr, requestJSON) {
+    if (!subChainAddr) {
+      subChainAddr = scsApi.contractAddress
+    }
+    var bodyJSON = { "jsonrpc": "2.0", "id": 0, "method": "ScsRPCMethod.GetContractInfo", "params": {"SubChainAddr": subChainAddr, "Request": requestJSON} }
+    return scsApi.request(bodyJSON)
+  },
+
+  getBlock(subChainAddr, number) {
+    if (!subChainAddr) {
+      subChainAddr = scsApi.contractAddress
+    }
+    var bodyJSON = { "jsonrpc": "2.0", "id": 0, "method": "ScsRPCMethod.GetBlock", "params": {"Number": number, "SubChainAddr": subChainAddr} }
+    return scsApi.request(bodyJSON)
+  }
+
+
+}
+
 export const id = localApi.id
 
 export const files = {
   list (root, api = localApi) {
     return api.files.ls(root)
       .then((res) => {
-        const files = sortBy(res, 'name') || []
-
-        return Promise.all(files.map((file) => {
-          return api.files.stat(join(root, file.name))
-            .then((stats) => {
-              return {...file, ...stats}
+        const innerFiles = sortBy(res, 'name') || []
+        const scsHashes = files.getScsHashList()
+        console.log("innerFiles", innerFiles)
+        console.log("scsHashes", scsHashes)
+        console.log("files", files)
+        return Promise.all(
+          innerFiles.map((file) => {
+              return api.files.stat(join(root, file.name))
+                .then((stats) => {
+                  var result = files.checkScsFileListStatus(scsHashes, file)
+                  stats.fsstat = result
+                  console.log('stats.fsstat', stats.fsstat)
+                  return {...file, ...stats}
+                })
             })
-        }))
+        )
       })
   },
 
@@ -75,31 +173,84 @@ export const files = {
 
   addToContract (hash) {
     console.log('addToContract', hash)
-    var contractAddress = '0x651ee0e11Bae6850C8e2eaDf5cC842AA9B38a2a8'
-    var hashHex = myChain3.toHex(hash)
-    hashHex = hashHex.substr(2)
-    var rightPaddedHex = myChain3.padRight(hashHex, 128)
-    var dataInput = '0xebaac7710000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002e' + rightPaddedHex
+    var dataInput = '0x' + abi.simpleEncode('write(string)', hash).toString('hex')
     console.log("dataInput", dataInput)
-    var myAccount = myChain3.personal.newAccount('test123')
-    console.log('myAccount', myAccount)
-    var callback = (err, res) => {
-      console.log('err', err)
-      console.log('res', res)
+    // var myAccount = myChain3.personal.newAccount('')
+    myChain3.personal.unlockAccount(scsApi.sender, '', 0)
+    console.log('myAccount', scsApi.sender)
+
+    return new Promise(resolve => {
+      myChain3.mc.sendTransaction({
+        from: scsApi.sender,
+        value:0,
+        to: scsApi.contractAddress,
+        gas: 1000000,
+        gasPrice: myChain3.mc.gasPrice,
+        shardingFlag: 1,
+        data: dataInput,
+        nonce: 1,
+        via: '0xd344716b819fc0e8bb5935756e6ed8da6b3077b9'
+      },
+      resolve)
+    })
+  },
+
+  getScsHashList() {
+    //test
+    var scsId = scsApi.getScsId()
+    console.log("scsId", scsId)
+    var respJSON = scsApi.getData(null, null, "fileHashes")
+    console.log("getData", respJSON, respJSON.result)
+    if (!respJSON.result) {
+      return null
     }
-    myChain3.mc.sendTransaction({
-      from: myAccount,
-      value:0,
-      to: contractAddress,
-      gas: 1000000,
-      gasPrice: myChain3.mc.gasPrice,
-      shardingflag: 1,
-      data: dataInput,
-      nonce: 1,
-      via: '0x5B43583F33214c790B8206D9B06685c49A1DB455'
-    },
-    callback)
-  }
+    var hashList = JSON.parse(respJSON.result)
+    return hashList
+  },
+
+  checkScsFileStatus(hash) {
+    console.log('checkScsFileStatus', hash)
+
+    var hashList = files.getScsHashList()
+
+    if (hashList) {
+      for (var i=0; i<hashList.length; i++) {
+        if (hashList[i] == hash) {
+          return 'ON'
+        }
+      }
+    } else {
+      return 'unknown'
+    }
+    return 'OFF'
+  },
+
+  checkScsFileListStatus(scsHashList, ipfsFileHash) {
+    //test
+    if (Math.random() > 0.5) {
+      return true
+    } else {
+      return false
+    }
+    if (!scsHashList) {
+      if (scsHashList == null) {
+        // return 'unknown'
+      } else {
+        // return 'OFF'
+      }
+      return false
+    }
+    for (var i=0; i<scsHashList.length; i++) {
+      if (scsHashList[i] == ipfsFileHash.hash) {
+        // return 'ON'
+        return true
+      }
+    }
+    // return 'OFF'
+    return false
+  } 
+
+
 }
 
 export const getConfig = (api = localApi) => {

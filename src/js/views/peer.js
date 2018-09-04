@@ -8,6 +8,18 @@ class Peer extends Component {
       <div className='webui-peer'>
         <div className='box info'>
           <p>
+            <strong>FileStorm Contract Address</strong> <code>0xf6a97597540165b9accd3837adfb7d1e77397bc1</code>
+          </p>
+          <p>
+            <strong>My Account</strong> <code>0x18e926ad1821e38597368b606be81de580f46686</code>
+          </p>
+          <p>
+            <strong>Chain3 Provider</strong> <code>http://127.0.0.1:8545</code>
+          </p>
+          
+          <br/>
+          <br/>
+          <p>
             <strong>{i18n.t('Peer ID')} </strong> <code>{this.props.peer.id}</code>&nbsp;
           </p>
           <br />

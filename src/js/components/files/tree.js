@@ -91,6 +91,7 @@ class Tree extends Component {
           <div className='files-tree-header'>
             <div className='item'>Name</div>
             <div className='item'>Size</div>
+            <div className='lastitem'>FileStorm</div>
           </div>
           <div className='files-tree-body'>
             {files}
